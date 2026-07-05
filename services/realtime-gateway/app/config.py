@@ -16,6 +16,8 @@ class Settings:
     nim_num_channels: int = 1
     nim_audio_format: str = "pcm16"
     nim_audio_chunk_ms: int = 80
+    webrtc_udp_port_min: int = 40000
+    webrtc_udp_port_max: int = 49999
     log_level: str = "INFO"
 
     @classmethod
@@ -27,6 +29,11 @@ class Settings:
         nim_client = os.getenv("NIM_CLIENT", "mock")
         if nim_client not in {"mock", "real"}:
             raise ValueError("NIM_CLIENT must be either 'mock' or 'real'")
+
+        webrtc_udp_port_min = int(os.getenv("WEBRTC_UDP_PORT_MIN", "40000"))
+        webrtc_udp_port_max = int(os.getenv("WEBRTC_UDP_PORT_MAX", "49999"))
+        if not 1 <= webrtc_udp_port_min <= webrtc_udp_port_max <= 65535:
+            raise ValueError("WEBRTC_UDP_PORT_MIN/MAX must be within 1..65535 and ordered")
 
         return cls(
             realtime_host=os.getenv("REALTIME_HOST", "0.0.0.0"),
@@ -42,5 +49,7 @@ class Settings:
             nim_num_channels=int(os.getenv("NIM_NUM_CHANNELS", "1")),
             nim_audio_format=os.getenv("NIM_AUDIO_FORMAT", "pcm16"),
             nim_audio_chunk_ms=chunk_ms,
+            webrtc_udp_port_min=webrtc_udp_port_min,
+            webrtc_udp_port_max=webrtc_udp_port_max,
             log_level=os.getenv("LOG_LEVEL", "INFO"),
         )

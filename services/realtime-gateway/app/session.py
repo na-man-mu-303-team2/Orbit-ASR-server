@@ -12,6 +12,7 @@ from .config import Settings
 from .metrics import SessionMetrics, now_ms
 from .models import ErrorPayload, MetricsPayload, StatusPayload, TranscriptPayload, WebRtcAnswer
 from .nim_client import NimClientProtocol, create_nim_client, normalize_transcript
+from .webrtc_ports import constrained_webrtc_udp_ports
 
 
 def _log_json(payload: dict[str, Any]) -> None:
@@ -65,8 +66,12 @@ class RealtimeSpikeSession:
 
         await pc.setRemoteDescription(RTCSessionDescription(sdp=sdp, type=type))
         answer = await pc.createAnswer()
-        await pc.setLocalDescription(answer)
-        await _wait_for_ice_gathering_complete(pc)
+        async with constrained_webrtc_udp_ports(
+            self.settings.webrtc_udp_port_min,
+            self.settings.webrtc_udp_port_max,
+        ):
+            await pc.setLocalDescription(answer)
+            await _wait_for_ice_gathering_complete(pc)
         return WebRtcAnswer(type="answer", sdp=pc.localDescription.sdp)
 
     async def register_websocket(self, websocket: WebSocket) -> None:

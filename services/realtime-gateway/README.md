@@ -77,7 +77,13 @@ The real-mode compose defaults are:
 ```text
 NIM_CLIENT=real
 NIM_REALTIME_WS_URL=ws://nim-asr:9000/v1/realtime?intent=transcription
+WEBRTC_UDP_PORT_MIN=40000
+WEBRTC_UDP_PORT_MAX=49999
 ```
+
+The gateway constrains aiortc ICE UDP binds to `40000-49999/udp` by default,
+and Docker Compose publishes the same range. On EC2, allow inbound UDP
+`40000-49999` to the instance security group for browser WebRTC audio uplink.
 
 Open the static nginx-served console:
 

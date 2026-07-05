@@ -43,10 +43,5 @@ class AudioFrameConverter:
 
 
 def _frame_to_pcm16(frame: object) -> bytes:
-    to_ndarray = getattr(frame, "to_ndarray", None)
-    if callable(to_ndarray):
-        array = to_ndarray()
-        return array.astype("<i2", copy=False).tobytes()
-
     planes: Iterable[object] = getattr(frame, "planes", [])
     return b"".join(bytes(plane) for plane in planes)

@@ -1,0 +1,51 @@
+services:
+  realtime-gateway:
+    image: python:3.11-slim
+    working_dir: /workspace/services/realtime-gateway
+    volumes:
+      - .:/workspace
+    command: >
+      bash -lc "pip install -e '.[dev]' &&
+      uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload"
+    environment:
+      NIM_CLIENT: ${NIM_CLIENT:-mock}
+      NIM_REALTIME_WS_URL: ${NIM_REALTIME_WS_URL:-ws://nim-asr:9000/v1/realtime?intent=transcription}
+      NIM_LANGUAGE_CODE: ${NIM_LANGUAGE_CODE:-ko-KR}
+      NIM_MODEL: ${NIM_MODEL:-nemotron-asr-streaming}
+      NIM_AUDIO_CHUNK_MS: ${NIM_AUDIO_CHUNK_MS:-80}
+    ports:
+      - "8080:8080"
+
+  web:
+    image: node:22
+    working_dir: /workspace/apps/web
+    volumes:
+      - .:/workspace
+    command: bash -lc "npm install && npm run dev"
+    environment:
+      VITE_REALTIME_API_BASE: ${VITE_REALTIME_API_BASE:-http://localhost:8080}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - realtime-gateway
+
+  nim-asr:
+    profiles: ["nim"]
+    image: nvcr.io/nim/nvidia/nemotron-asr-streaming:latest
+    runtime: nvidia
+    shm_size: 8gb
+    environment:
+      NGC_API_KEY: ${NGC_API_KEY:?NGC_API_KEY is required}
+      NIM_HTTP_API_PORT: 9000
+      NIM_GRPC_API_PORT: 50051
+      NIM_TAGS_SELECTOR: name=nemotron-asr-streaming,type=multi,batch_size=32
+    ports:
+      - "9000:9000"
+      - "50051:50051"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: ["gpu"]

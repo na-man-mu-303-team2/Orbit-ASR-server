@@ -54,6 +54,53 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
 
 `NGC_API_KEY` must stay in the environment and must not be committed.
 
+## g6.xlarge Docker Deployment
+
+This path builds the gateway and web images, starts NVIDIA NIM from NGC, and wires the gateway to the `nim-asr` service over Docker networking.
+
+Prerequisites on the `g6.xlarge` host:
+
+- NVIDIA driver and NVIDIA Container Toolkit installed.
+- Docker Engine with Compose v2.
+- NGC access for `nvcr.io/nim/nvidia/nemotron-asr-streaming:latest`.
+- `NGC_API_KEY` exported in the shell, not written into the repository.
+
+Run from the repository root:
+
+```bash
+export NGC_API_KEY=...
+docker compose -f docker-compose.realtime.yml --profile nim up --build
+```
+
+The real-mode compose defaults are:
+
+```text
+NIM_CLIENT=real
+NIM_REALTIME_WS_URL=ws://nim-asr:9000/v1/realtime?intent=transcription
+```
+
+Open the static nginx-served console:
+
+```text
+http://<g6-public-hostname-or-ip>:5173/realtime-asr-spike
+```
+
+If `5173` is already allocated on the host:
+
+```bash
+WEB_PORT=5174 docker compose -f docker-compose.realtime.yml --profile nim up --build
+```
+
+The web container serves the Vite build through nginx. Browser calls to `/health`, `/api/*`, and the transcript WebSocket route are proxied from nginx to `realtime-gateway:8080`, so the browser can use same-origin requests.
+
+For local Docker mock mode without NIM:
+
+```bash
+NIM_CLIENT=mock docker compose -f docker-compose.realtime.yml up --build realtime-gateway web
+```
+
+This keeps `nim-asr` disabled and uses the deterministic Korean mock transcript path.
+
 ## Frontend Console
 
 ```bash

@@ -1,31 +1,28 @@
 services:
   realtime-gateway:
-    image: python:3.11-slim
-    working_dir: /workspace/services/realtime-gateway
-    volumes:
-      - .:/workspace
-    command: >
-      bash -lc "pip install -e '.[dev]' &&
-      uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload"
+    build:
+      context: ./services/realtime-gateway
+      dockerfile: Dockerfile
+    image: orbit-realtime-gateway:latest
     environment:
-      NIM_CLIENT: ${NIM_CLIENT:-mock}
+      NIM_CLIENT: ${NIM_CLIENT:-real}
       NIM_REALTIME_WS_URL: ${NIM_REALTIME_WS_URL:-ws://nim-asr:9000/v1/realtime?intent=transcription}
       NIM_LANGUAGE_CODE: ${NIM_LANGUAGE_CODE:-ko-KR}
       NIM_MODEL: ${NIM_MODEL:-nemotron-asr-streaming}
       NIM_AUDIO_CHUNK_MS: ${NIM_AUDIO_CHUNK_MS:-80}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
     ports:
       - "8080:8080"
 
   web:
-    image: node:22
-    working_dir: /workspace/apps/web
-    volumes:
-      - .:/workspace
-    command: bash -lc "npm install && npm run dev"
-    environment:
-      VITE_REALTIME_API_BASE: ${VITE_REALTIME_API_BASE:-http://localhost:8080}
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        VITE_REALTIME_API_BASE: ${VITE_REALTIME_API_BASE:-}
+    image: orbit-realtime-asr-web:latest
     ports:
-      - "5173:5173"
+      - "${WEB_PORT:-5173}:80"
     depends_on:
       - realtime-gateway
 

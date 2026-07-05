@@ -27,6 +27,11 @@ class WebRtcAnswer(BaseModel):
     sdp: str
 
 
+class StopSessionResponse(BaseModel):
+    sessionId: str
+    status: Literal["stopped"]
+
+
 class LatencyPayload(BaseModel):
     firstAudioToThisTranscriptMs: int | None = None
     lastChunkSentToThisTranscriptMs: int | None = None

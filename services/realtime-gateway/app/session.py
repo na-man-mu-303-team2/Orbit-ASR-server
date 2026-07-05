@@ -238,3 +238,10 @@ class SessionManager:
 
     def get_session(self, session_id: str) -> RealtimeSpikeSession | None:
         return self.sessions.get(session_id)
+
+    async def stop_session(self, session_id: str) -> bool:
+        session = self.sessions.pop(session_id, None)
+        if session is None:
+            return False
+        await session.stop()
+        return True

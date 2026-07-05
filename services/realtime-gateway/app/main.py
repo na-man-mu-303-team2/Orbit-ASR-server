@@ -4,7 +4,13 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import Settings
-from .models import CreateSessionResponse, HealthResponse, WebRtcAnswer, WebRtcOffer
+from .models import (
+    CreateSessionResponse,
+    HealthResponse,
+    StopSessionResponse,
+    WebRtcAnswer,
+    WebRtcOffer,
+)
 from .session import SessionManager
 
 
@@ -49,6 +55,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if session is None:
             raise HTTPException(status_code=404, detail={"error": {"code": "SESSION_NOT_FOUND"}})
         return await session.handle_offer(offer.sdp, offer.type)
+
+    @app.post("/api/realtime/sessions/{session_id}/stop", response_model=StopSessionResponse)
+    async def stop_session(session_id: str) -> StopSessionResponse:
+        stopped = await manager.stop_session(session_id)
+        if not stopped:
+            raise HTTPException(status_code=404, detail={"error": {"code": "SESSION_NOT_FOUND"}})
+        return StopSessionResponse(sessionId=session_id, status="stopped")
 
     @app.websocket("/api/realtime/sessions/{session_id}/events")
     async def session_events(websocket: WebSocket, session_id: str) -> None:

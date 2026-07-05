@@ -66,6 +66,7 @@ class RealtimeSpikeSession:
         await pc.setRemoteDescription(RTCSessionDescription(sdp=sdp, type=type))
         answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
+        await _wait_for_ice_gathering_complete(pc)
         return WebRtcAnswer(type="answer", sdp=pc.localDescription.sdp)
 
     async def register_websocket(self, websocket: WebSocket) -> None:
@@ -245,3 +246,26 @@ class SessionManager:
             return False
         await session.stop()
         return True
+
+
+async def _wait_for_ice_gathering_complete(peer_connection: Any, timeout: float = 2.0) -> None:
+    if peer_connection.iceGatheringState == "complete":
+        return
+
+    event = asyncio.Event()
+
+    @peer_connection.on("icegatheringstatechange")
+    def on_icegatheringstatechange() -> None:
+        if peer_connection.iceGatheringState == "complete":
+            event.set()
+
+    try:
+        await asyncio.wait_for(event.wait(), timeout=timeout)
+    except TimeoutError:
+        _log_json(
+            {
+                "event": "ice_gathering_timeout",
+                "state": peer_connection.iceGatheringState,
+                "timestamp": now_ms(),
+            }
+        )

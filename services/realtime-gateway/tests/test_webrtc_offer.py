@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from aiortc import RTCPeerConnection
 from fastapi.testclient import TestClient
@@ -15,6 +17,7 @@ async def test_offer_endpoint_returns_webrtc_answer() -> None:
 
     offer = await peer_connection.createOffer()
     await peer_connection.setLocalDescription(offer)
+    await wait_for_ice_gathering_complete(peer_connection)
     response = client.post(
         f"/api/realtime/sessions/{session_id}/offer",
         json={
@@ -28,3 +31,20 @@ async def test_offer_endpoint_returns_webrtc_answer() -> None:
     body = response.json()
     assert body["type"] == "answer"
     assert body["sdp"].startswith("v=0")
+
+
+async def wait_for_ice_gathering_complete(
+    peer_connection: RTCPeerConnection,
+    timeout: float = 2.0,
+) -> None:
+    if peer_connection.iceGatheringState == "complete":
+        return
+
+    event = asyncio.Event()
+
+    @peer_connection.on("icegatheringstatechange")
+    def on_icegatheringstatechange() -> None:
+        if peer_connection.iceGatheringState == "complete":
+            event.set()
+
+    await asyncio.wait_for(event.wait(), timeout=timeout)
